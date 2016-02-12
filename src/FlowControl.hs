@@ -1,4 +1,6 @@
 -- for loops in haskell
+-- the concepts are essentially the same between two languages; or two streams of languages. The difference is superficial.
+
 
 import Control.Applicative
 
