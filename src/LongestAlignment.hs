@@ -2,6 +2,8 @@
 -- March 2, 2016
 
 -- LongestAlignment
+-- BLAST algorithm
+
 -- Find longest strech of matching
 -- random generation sequences that match the probability
 -- Not working yet
