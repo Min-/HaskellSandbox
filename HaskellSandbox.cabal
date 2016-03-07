@@ -5,10 +5,10 @@ description:         Please see README.md
 homepage:            http://github.com/githubuser/HaskellSandbox#readme
 license:             BSD3
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2016 Author Here
-category:            Web
+author:              Min Zhang
+maintainer:          mz1 at bcm dot edu
+copyright:           2016 Min Zhang
+category:            data
 build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10

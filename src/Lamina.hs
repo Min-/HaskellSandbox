@@ -44,7 +44,7 @@ inputpath = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSE68260_Clone.
 -- array data
 -- TODO: note that the ref is using hg18, liftOver the final wig, and do wigToBigWig
 --input_array_ref = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GPL10559-18779.txt"
-output_intermediate_ref = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GPL10559-18779.clean.txt"
+--output_intermediate_ref = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GPL10559-18779.clean.txt"
 
 --input_array_data = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM1700333-6918.txt"
 --output_annotated_array = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM1700333-6918.array.txt"
@@ -122,14 +122,14 @@ arrayRef2CleanFile input_array_ref output_intermediate_ref = do
   writeTable output_intermediate_ref res
 
 -- need to update arrayRef2CleanFile first, Only need to do it once
-arrayRef2Map = do
+arrayRef2Map output_intermediate_ref = do
   input <- smartTable output_intermediate_ref
   return $ M.fromList $ map (\x-> (x!!0, [x!!1, x!!2, x!!3])) input
 
 -- annotate array data
-annotateArray input_array_data output_annotated_array = do
+annotateArray input_ref input_array_data output_annotated_array = do
   array <- map (T.splitOn "\t") . dropWhile (\x->T.head x == '#' || T.take 2 x == "ID") . T.lines . T.replace "\r" "" <$> TextIO.readFile input_array_data
-  ref <- arrayRef2Map
+  ref <- arrayRef2Map input_ref
   let res = filter (\x->head x /= "NA") $ map (\x-> (M.lookupDefault ["NA"] (head x) ref) ++ (tail x)) array
   writeTable output_annotated_array res
 
@@ -142,6 +142,8 @@ array2Wig input_sorted_bed output_wig = do
 
 -- compile array2Wig
 main = do
-  TextIO.putStrLn "array2Wig input_array_data output_annotated_array" 
-  [input, output] <- take 2 <$> getArgs
-  annotateArray input output
+  TextIO.putStrLn "Lamina input_ref input_array_data output_annotated_array" 
+  [mode, refpath, input, output] <- take 4 <$> getArgs
+  case mode of 
+    "array2bed" -> do annotateArray refpath input output
+    "bed2wig" -> do array2Wig input output
