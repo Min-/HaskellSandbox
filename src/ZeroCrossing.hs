@@ -27,7 +27,7 @@ import qualified Data.List as L
 import Control.Monad (fmap)
 import Data.Ord (comparing)
 import Data.Function (on)
-import qualified Safe as S
+import qualified Safe as Safe
 import qualified Data.HashMap.Lazy as M
 import qualified Data.Maybe as Maybe
 import qualified Data.Foldable as F (all)
@@ -63,7 +63,7 @@ zeroCrossing  xs =
   if product2 ys <= 0
   then 1 : zeroCrossing (drop 1 xs)  
   else 0 : zeroCrossing (drop 1 xs)
-    where product2 x = (fst $ head x) * (fst $ head $ drop 1 x)
+    where product2 x = (signum (fst $ head x)) * (signum (fst $ head $ drop 1 x))
           ys = zip xs [1..]
          
 slideFunc f _ _ [] = [] 
@@ -74,8 +74,10 @@ slideFunc f windowSize slideSize xs
 
 slideSum = slideFunc sum
 
+transformation = zeroCrossing . logBase 2 . mean
+
 main = do
   input <- TextIO.readFile inputpath
-  let res = matTrans 3 1 "\t" (logBase 2 . mean) input
+  let res = matTrans 3 1 "\t" transformation input
   return res
 
