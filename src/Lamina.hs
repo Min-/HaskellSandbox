@@ -143,14 +143,19 @@ array2Wig = do
   TextIO.writeFile outputpath wigHeader
   TextIO.appendFile outputpath (pair2Wig valuePair []) -- good, re-use code
 
+offSet n xs = reverse $ drop (n - half) $ reverse (drop (half - 1) xs) 
+  where half = n `div` 2
+
 -- slide window function on wig file
-breakWig inputpath outputpath = do
+breakWig inputpath outputpath windowFunc windowSize slideSize = do
   input <- T.breakOn "\n" <$> TextIO.readFile inputpath
   let header = fst input
   let chrs =  T.splitOn "variableStep " (snd input)
   let chrNames = drop 1 $ map (\x-> fst $ T.breakOn "\n" x) chrs
-  let chrPos = drop 1 $ map (\x -> map (T.splitOn "\t") $ T.lines $ snd $ T.breakOn "\n" x) chrs -- chrPos :: [[[T.Text]]]
-  let chrPosTransformation = map (L.transpose . (\[x,y] -> [x, map readDouble $ slideFunc mean 50 1 (map toDouble y)]) . L.transpose) chrPos
+  let chrPos = drop 1 $ map (\x -> map (T.splitOn "\t") $ T.lines $ T.tail $ snd $ T.breakOn "\n" x) chrs -- chrPos :: [[[T.Text]]] -- T.tail to get rid of residue \n
+  let chrPosTransformation = map (L.transpose . (\[x,y] -> [offSet windowSize x, map readDouble $ slideFunc windowFunc windowSize slideSize (map toDouble y)]) . L.transpose) chrPos -- position is off-set by windowSize
   let chrPos' = map ( T.unlines . map (T.intercalate "\t")) chrPosTransformation
   let res = T.unlines [header, T.unlines (zipWith (\x y-> T.concat ["variableStep " , "\t", x, "\n", y]) chrNames chrPos')]
   TextIO.writeFile outputpath res
+
+main = breakWig "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.wig" "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.mean50.wig" mean 30 1

@@ -1,0 +1,104 @@
+	Mon Mar  7 20:30 2016 Time and Allocation Profiling Report  (Final)
+
+	   Lamina +RTS -p -RTS
+
+	total time  =     1857.25 secs   (1857248 ticks @ 1000 us, 1 processor)
+	total alloc = 40,876,820,176 bytes  (excludes profiling overheads)
+
+COST CENTRE                   MODULE  %time %alloc
+
+slideFunc                     Main     94.4    4.0
+toDouble                      MyText    2.7   36.1
+readDouble                    MyText    1.1   25.3
+breakWig                      Main      0.8   14.7
+mean                          Main      0.4    6.0
+breakWig.chrPos'              Main      0.2    2.2
+breakWig.chrPos.\             Main      0.2    5.6
+breakWig.res                  Main      0.1    2.5
+breakWig.chrPosTransformation Main      0.1    1.0
+
+
+                                                                                        individual     inherited
+COST CENTRE                          MODULE                           no.     entries  %time %alloc   %time %alloc
+
+MAIN                                 MAIN                              93           0    0.0    0.0   100.0  100.0
+ main                                Main                             188           0    0.0    0.0   100.0  100.0
+  breakWig                           Main                             189           0    0.8   14.7   100.0  100.0
+   breakWig.chrPos'                  Main                             208           1    0.2    2.2     0.2    2.2
+   breakWig.chrPosTransformation     Main                             207           1    0.1    1.0    98.8   73.5
+    breakWig.chrPosTransformation.\  Main                             230          13    0.0    0.4    98.7   72.5
+     toDouble                        MyText                           245      925444    2.7   36.1     2.7   36.1
+     readDouble                      MyText                           243           0    1.1   25.3     1.2   25.8
+      unstreamChunks/outer           Data.Text.Internal.Lazy.Fusion   247      925096    0.0    0.1     0.1    0.6
+       unstreamChunks/inner          Data.Text.Internal.Lazy.Fusion   248    17599520    0.0    0.1     0.1    0.5
+        unstreamChunks/resize        Data.Text.Internal.Lazy.Fusion   249     2775258    0.0    0.4     0.0    0.4
+     slideFunc                       Main                             237      925109   94.4    4.0    94.8   10.0
+      mean                           Main                             244      925096    0.4    6.0     0.4    6.0
+     offSet                          Main                             231          13    0.0    0.1     0.0    0.1
+   breakWig.chrPos                   Main                             206           1    0.0    0.0     0.2    5.6
+    breakWig.chrPos.\                Main                             223          13    0.2    5.6     0.2    5.6
+   breakWig.chrs                     Main                             199           1    0.0    0.9     0.0    0.9
+   breakWig.chrNames                 Main                             198           1    0.0    0.0     0.0    0.0
+    breakWig.chrNames.\              Main                             216          13    0.0    0.0     0.0    0.0
+   breakWig.res                      Main                             196           1    0.1    2.5     0.1    3.1
+    breakWig.res.\                   Main                             209          13    0.0    0.7     0.0    0.7
+   breakWig.header                   Main                             195           1    0.0    0.0     0.0    0.0
+   readTextDevice                    Data.Text.Internal.IO            192       14697    0.0    0.0     0.0    0.0
+ CAF                                 MyText                           185           0    0.0    0.0     0.0    0.0
+  toDouble                           MyText                           246           0    0.0    0.0     0.0    0.0
+  readDouble                         MyText                           242           1    0.0    0.0     0.0    0.0
+   unstreamChunks/inner              Data.Text.Internal.Lazy.Fusion   250           0    0.0    0.0     0.0    0.0
+    unstreamChunks/outer             Data.Text.Internal.Lazy.Fusion   251           1    0.0    0.0     0.0    0.0
+ CAF                                 Main                             182           0    0.0    0.0     0.0    0.0
+  main                               Main                             186           1    0.0    0.0     0.0    0.0
+   breakWig                          Main                             187           1    0.0    0.0     0.0    0.0
+    breakWig.chrPos'                 Main                             236           0    0.0    0.0     0.0    0.0
+     unstreamChunks/inner            Data.Text.Internal.Lazy.Fusion   240           0    0.0    0.0     0.0    0.0
+      unstreamChunks/outer           Data.Text.Internal.Lazy.Fusion   241           1    0.0    0.0     0.0    0.0
+     unstreamChunks/outer            Data.Text.Internal.Lazy.Fusion   238           1    0.0    0.0     0.0    0.0
+      unstreamChunks/inner           Data.Text.Internal.Lazy.Fusion   239           1    0.0    0.0     0.0    0.0
+    breakWig.chrPosTransformation    Main                             232           0    0.0    0.0     0.0    0.0
+     breakWig.chrPosTransformation.\ Main                             233           0    0.0    0.0     0.0    0.0
+      offSet                         Main                             234           0    0.0    0.0     0.0    0.0
+       offSet.half                   Main                             235           1    0.0    0.0     0.0    0.0
+    breakWig.chrPos                  Main                             224           0    0.0    0.0     0.0    0.0
+     breakWig.chrPos.\               Main                             225           0    0.0    0.0     0.0    0.0
+      unstreamChunks/inner           Data.Text.Internal.Lazy.Fusion   228           0    0.0    0.0     0.0    0.0
+       unstreamChunks/outer          Data.Text.Internal.Lazy.Fusion   229           2    0.0    0.0     0.0    0.0
+      unstreamChunks/outer           Data.Text.Internal.Lazy.Fusion   226           2    0.0    0.0     0.0    0.0
+       unstreamChunks/inner          Data.Text.Internal.Lazy.Fusion   227           2    0.0    0.0     0.0    0.0
+    breakWig.chrNames                Main                             217           0    0.0    0.0     0.0    0.0
+     breakWig.chrNames.\             Main                             218           0    0.0    0.0     0.0    0.0
+      unstreamChunks/inner           Data.Text.Internal.Lazy.Fusion   221           0    0.0    0.0     0.0    0.0
+       unstreamChunks/outer          Data.Text.Internal.Lazy.Fusion   222           1    0.0    0.0     0.0    0.0
+      unstreamChunks/outer           Data.Text.Internal.Lazy.Fusion   219           1    0.0    0.0     0.0    0.0
+       unstreamChunks/inner          Data.Text.Internal.Lazy.Fusion   220           1    0.0    0.0     0.0    0.0
+    breakWig.chrs                    Main                             200           0    0.0    0.0     0.0    0.0
+     unstreamChunks/inner            Data.Text.Internal.Lazy.Fusion   204           0    0.0    0.0     0.0    0.0
+      unstreamChunks/outer           Data.Text.Internal.Lazy.Fusion   205           1    0.0    0.0     0.0    0.0
+     unstreamChunks/outer            Data.Text.Internal.Lazy.Fusion   201           1    0.0    0.0     0.0    0.0
+      unstreamChunks/inner           Data.Text.Internal.Lazy.Fusion   202          13    0.0    0.0     0.0    0.0
+       unstreamChunks/resize         Data.Text.Internal.Lazy.Fusion   203           2    0.0    0.0     0.0    0.0
+    breakWig.res                     Main                             197           0    0.0    0.0     0.0    0.0
+     breakWig.res.\                  Main                             210           0    0.0    0.0     0.0    0.0
+      unstreamChunks/inner           Data.Text.Internal.Lazy.Fusion   214           0    0.0    0.0     0.0    0.0
+       unstreamChunks/outer          Data.Text.Internal.Lazy.Fusion   215           3    0.0    0.0     0.0    0.0
+      unstreamChunks/outer           Data.Text.Internal.Lazy.Fusion   211           3    0.0    0.0     0.0    0.0
+       unstreamChunks/inner          Data.Text.Internal.Lazy.Fusion   212          15    0.0    0.0     0.0    0.0
+        unstreamChunks/resize        Data.Text.Internal.Lazy.Fusion   213           2    0.0    0.0     0.0    0.0
+    unstreamChunks/inner             Data.Text.Internal.Lazy.Fusion   193           0    0.0    0.0     0.0    0.0
+     unstreamChunks/outer            Data.Text.Internal.Lazy.Fusion   194           1    0.0    0.0     0.0    0.0
+    unstreamChunks/outer             Data.Text.Internal.Lazy.Fusion   190           1    0.0    0.0     0.0    0.0
+     unstreamChunks/inner            Data.Text.Internal.Lazy.Fusion   191           1    0.0    0.0     0.0    0.0
+ CAF                                 Data.Text.Array                  176           0    0.0    0.0     0.0    0.0
+ CAF                                 Data.Text.Internal               172           0    0.0    0.0     0.0    0.0
+ CAF                                 Data.Text.Lazy                   159           0    0.0    0.0     0.0    0.0
+ CAF                                 GHC.Conc.Signal                  142           0    0.0    0.0     0.0    0.0
+ CAF                                 GHC.Float                        137           0    0.0    0.0     0.0    0.0
+ CAF                                 GHC.IO.Encoding                  135           0    0.0    0.0     0.0    0.0
+ CAF                                 GHC.IO.Encoding.Iconv            133           0    0.0    0.0     0.0    0.0
+ CAF                                 GHC.IO.FD                        127           0    0.0    0.0     0.0    0.0
+ CAF                                 GHC.IO.Handle.FD                 125           0    0.0    0.0     0.0    0.0
+ CAF                                 GHC.TopHandler                   115           0    0.0    0.0     0.0    0.0
+ CAF                                 Text.Read.Lex                    110           0    0.0    0.0     0.0    0.0
+ CAF                                 GHC.Integer.Type                 100           0    0.0    0.0     0.0    0.0
