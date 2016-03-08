@@ -2,7 +2,7 @@
 {-#LANGUAGE FlexibleContexts#-}
 
 {-
-Project name: Lamina associated domain and find for domain boundaries and gene blocks
+Project name: Lamina associated domain and looking for domain boundaries and gene blocks
 Min Zhang
 Date: March 4, 2016
 Version: v0.1.0
@@ -29,6 +29,7 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Foldable as F (all)
 import Data.Traversable (sequenceA)
 import qualified System.IO as IO
+import Control.Arrow
 import System.Environment
 import MyText
 import MyTable
@@ -56,22 +57,28 @@ output_annotated_array2 = "/Users/minzhang/Documents/data/P55_hiC_looping/data/G
 mean [] = 0
 mean xs = sum xs / (L.genericLength xs)
 
+-- zerocrossing is not returning index
 zeroCrossing [] = []
 zeroCrossing [x] = []
 zeroCrossing  xs 
-  | product2 ys && fstSig ys >= 0 = "+" : zeroCrossing (drop 1 xs)  
-  | product2 ys && fstSig ys < 0  = "-" : zeroCrossing (drop 1 xs)
+  | sameSig xs && fstSig xs >= 0 = "+" : zeroCrossing (drop 1 xs)  
+  | sameSig xs && fstSig xs < 0  = "-" : zeroCrossing (drop 1 xs)
   | otherwise                     = "*" : zeroCrossing (drop 1 xs)
-    where product2 x = fstSig x == sndSig x
-          ys = zip xs [1..]
-          fstSig x = signum (fst $ head x)
-          sndSig x = signum (fst $ head $ drop 1 x)
+    where sameSig x = fstSig x == sndSig x
+          fstSig x = signum (head x)
+          sndSig x = signum (head $ drop 1 x)
          
 slideFunc f _ _ [] = [] 
 slideFunc f windowSize slideSize xs
   | slideSize > windowSize = Safe.headNote "Slide size should be smaller than window size" []
   | length xs < windowSize = []
   | otherwise = (f $ take windowSize xs) : (slideFunc f windowSize slideSize $ drop slideSize xs)
+
+slideMean windowSize initMean xs 
+  | length xs < windowSize = []
+  | otherwise = initMean : slideMean windowSize (initMean + (newNum xs - lastNum xs) / (fromIntegral windowSize)) (drop 1 xs)
+  where newNum xs = head $ drop windowSize xs
+        lastNum xs = head xs
 
 slideSum = slideFunc sum
 
@@ -147,15 +154,59 @@ offSet n xs = reverse $ drop (n - half) $ reverse (drop (half - 1) xs)
   where half = n `div` 2
 
 -- slide window function on wig file
-breakWig inputpath outputpath windowFunc windowSize slideSize = do
+breakWig inputpath outputpath windowSize = do
   input <- T.breakOn "\n" <$> TextIO.readFile inputpath
   let header = fst input
   let chrs =  T.splitOn "variableStep " (snd input)
   let chrNames = drop 1 $ map (\x-> fst $ T.breakOn "\n" x) chrs
   let chrPos = drop 1 $ map (\x -> map (T.splitOn "\t") $ T.lines $ T.tail $ snd $ T.breakOn "\n" x) chrs -- chrPos :: [[[T.Text]]] -- T.tail to get rid of residue \n
-  let chrPosTransformation = map (L.transpose . (\[x,y] -> [offSet windowSize x, map readDouble $ slideFunc windowFunc windowSize slideSize (map toDouble y)]) . L.transpose) chrPos -- position is off-set by windowSize
+--  let chrPosTransformation = map (L.transpose . (\[x,y] -> [offSet windowSize x, map readDouble $ slideFunc windowFunc windowSize slideSize (map toDouble y)]) . L.transpose) chrPos -- position is off-set by windowSize
+  let chrPosTransformation = map (L.transpose . (\[x,y] -> [offSet windowSize x, map readDouble $ (\xs->slideMean windowSize (mean $ take windowSize xs) xs) (map toDouble y)]) . L.transpose) chrPos -- position is off-set by windowSize
   let chrPos' = map ( T.unlines . map (T.intercalate "\t")) chrPosTransformation
   let res = T.unlines [header, T.unlines (zipWith (\x y-> T.concat ["variableStep " , "\t", x, "\n", y]) chrNames chrPos')]
   TextIO.writeFile outputpath res
 
-main = breakWig "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.wig" "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.mean50.wig" mean 30 1
+-- mean smooth with slide window size 30 probes (30*1.2kb size); and move 1 probe a time.
+slideWindow30 = breakWig "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.wig" "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.mean30_2.wig" 30 
+
+-- #########################
+-- Find LADs and gene blocks
+find_lads_input_path = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.mean30_2.wig"
+
+-- pure function, input is separated [pos\tvalue] :: [T.Text] in groups by chromosomes
+findLadsOnChr wig = filter (\(a,b)->fst b == "*") (zip position laminId2)
+  where (position, laminId) = liftA2 (\a b->(a, b)) head (zeroCrossing . map toDouble . last) (L.transpose wig)
+        laminId2 = zip ("" : laminId) laminId -- show sign of the upstream of the boudary (laminID position)
+
+-- separate wig file by individual chromosomes, still pure; wig by default is variableSteps
+-- also assume there two lines of header of the beginning. TODO neeed to fix this.
+wig2chr :: T.Text -> [(T.Text, [[T.Text]])]
+wig2chr wig = filter (\x-> (/=) ["noHead"] $ Safe.headDef ["noHead"] $ snd x) .
+              map (\x->liftA2 (\a b -> (a,b)) 
+                              (last . T.splitOn "=" . head) 
+                              (map (T.splitOn "\t") . tail)
+                              x) . 
+              map (filter (not . T.null) . T.lines) . 
+              drop 2 . T.splitOn "variableStep " $ wig
+
+mergeChr chr wigLads = T.init $
+                       T.unlines $ 
+                       L.zipWith4 (\a b c d -> T.intercalate "\t" [a, b, c, d])
+                                chrs
+                                positionsStart 
+                                positionsEnd 
+                                signs
+  where positionsEnd = map fst wigLads
+        positionsStart = map (readInt . (\x-> x + 1) . toInt) $ "1" : (init positionsEnd)
+        signs = map (snd . snd) wigLads
+        chrs = repeat chr
+        
+main = do
+  inputwig <- TextIO.readFile find_lads_input_path
+  let res = T.unlines $
+            map (liftA2 mergeChr 
+                        fst
+                        (findLadsOnChr . snd))
+           (wig2chr inputwig)
+  TextIO.writeFile (find_lads_input_path ++ ".bed") res
+  
