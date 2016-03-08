@@ -43,11 +43,14 @@ inputpath = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSE68260_Clone.
 
 -- array data
 -- TODO: note that the ref is using hg18, liftOver the final wig, and do wigToBigWig
---input_array_ref = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GPL10559-18779.txt"
---output_intermediate_ref = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GPL10559-18779.clean.txt"
+input_array_ref = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GPL10559-18779.txt"
+output_intermediate_ref = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GPL10559-18779.clean.txt"
 
---input_array_data = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM1700333-6918.txt"
---output_annotated_array = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM1700333-6918.array.txt"
+input_array_data = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM1700333-6918.txt"
+output_annotated_array = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM1700333-6918.array.txt"
+
+input_array_data2 = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.txt"
+output_annotated_array2 = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.txt"
 
 -- ## basic functions
 mean [] = 0
@@ -122,28 +125,32 @@ arrayRef2CleanFile input_array_ref output_intermediate_ref = do
   writeTable output_intermediate_ref res
 
 -- need to update arrayRef2CleanFile first, Only need to do it once
-arrayRef2Map output_intermediate_ref = do
+arrayRef2Map = do
   input <- smartTable output_intermediate_ref
   return $ M.fromList $ map (\x-> (x!!0, [x!!1, x!!2, x!!3])) input
 
 -- annotate array data
-annotateArray input_ref input_array_data output_annotated_array = do
-  array <- map (T.splitOn "\t") . dropWhile (\x->T.head x == '#' || T.take 2 x == "ID") . T.lines . T.replace "\r" "" <$> TextIO.readFile input_array_data
-  ref <- arrayRef2Map input_ref
+annotateArray = do
+  array <- map (T.splitOn "\t") . dropWhile (\x->T.head x == '#' || T.take 2 x == "ID") . T.lines . T.replace "\r" "" <$> TextIO.readFile input_array_data2
+  ref <- arrayRef2Map 
   let res = filter (\x->head x /= "NA") $ map (\x-> (M.lookupDefault ["NA"] (head x) ref) ++ (tail x)) array
-  writeTable output_annotated_array res
+  writeTable output_annotated_array2 res
 
-array2Wig input_sorted_bed output_wig = do
- -- let inputpath = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM1700333-6918.array.hg19.sort.bed" -- liftOver from hg18 to hg19
- -- let outputpath = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM1700333-6918.hg19.wig"
-  valuePair <- map (\x->(take 3 x, toDouble $ last x)) <$> smartTable input_sorted_bed
-  TextIO.writeFile output_wig wigHeader
-  TextIO.appendFile output_wig (pair2Wig valuePair []) -- good, re-use code
+array2Wig = do
+  let inputpath = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.bed" -- liftOver from hg18 to hg19
+  let outputpath = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.wig"
+  valuePair <- map (\x->(take 3 x, toDouble $ last x)) <$> smartTable inputpath
+  TextIO.writeFile outputpath wigHeader
+  TextIO.appendFile outputpath (pair2Wig valuePair []) -- good, re-use code
 
--- compile array2Wig
-main = do
-  TextIO.putStrLn "Lamina input_ref input_array_data output_annotated_array" 
-  [mode, refpath, input, output] <- take 4 <$> getArgs
-  case mode of 
-    "array2bed" -> do annotateArray refpath input output
-    "bed2wig" -> do array2Wig input output
+-- slide window function on wig file
+breakWig inputpath outputpath = do
+  input <- T.breakOn "\n" <$> TextIO.readFile inputpath
+  let header = fst input
+  let chrs =  T.splitOn "variableStep " (snd input)
+  let chrNames = drop 1 $ map (\x-> fst $ T.breakOn "\n" x) chrs
+  let chrPos = drop 1 $ map (\x -> map (T.splitOn "\t") $ T.lines $ snd $ T.breakOn "\n" x) chrs -- chrPos :: [[[T.Text]]]
+  let chrPosTransformation = map (L.transpose . (\[x,y] -> [x, map readDouble $ slideFunc mean 50 1 (map toDouble y)]) . L.transpose) chrPos
+  let chrPos' = map ( T.unlines . map (T.intercalate "\t")) chrPosTransformation
+  let res = T.unlines [header, T.unlines (zipWith (\x y-> T.concat ["variableStep " , "\t", x, "\n", y]) chrNames chrPos')]
+  TextIO.writeFile outputpath res
