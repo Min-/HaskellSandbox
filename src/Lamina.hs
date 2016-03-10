@@ -17,7 +17,6 @@ README:
 
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as TextIO
-import qualified Data.Char as C
 import Control.Applicative
 import qualified Data.List as L
 import Control.Monad (fmap)
@@ -34,6 +33,21 @@ import System.Environment
 import MyText
 import MyTable
 import Util
+
+-- ####### data type
+data Bed = Bed 
+           { chr_bed :: T.Text
+           , start_bed :: Int
+           , end_bed :: Int
+           , sign_bed :: T.Text}
+           deriving (Read, Show, Eq)
+
+bed2List (Bed chr start end sign) = [chr, readInt start, readInt end, sign]
+list2Bed [chr, start, end, sign] = Bed chr (toInt start) (toInt end) sign
+
+bedSize (Bed chr start end sign) = end - start
+
+-- ########
 
 -- ## Samples
 seq1 = [1,1,4,5,7,4,2,0,-1,-3,-9,-5,-2,4,12,15,17,-14,18,1,2,3,4]
@@ -167,11 +181,13 @@ breakWig inputpath outputpath windowSize = do
   TextIO.writeFile outputpath res
 
 -- mean smooth with slide window size 30 probes (30*1.2kb size); and move 1 probe a time.
-slideWindow30 = breakWig "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.wig" "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.mean30_2.wig" 30 
+slideWindow = breakWig "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.wig" 
+                       "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.mean120.wig" 
+                       120
 
 -- #########################
 -- Find LADs and gene blocks
-find_lads_input_path = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.mean30_2.wig"
+find_lads_input_path = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.mean30.wig"
 
 -- pure function, input is separated [pos\tvalue] :: [T.Text] in groups by chromosomes
 findLadsOnChr wig = filter (\(a,b)->fst b == "*") (zip position laminId2)
@@ -197,11 +213,11 @@ mergeChr chr wigLads = T.init $
                                 positionsEnd 
                                 signs
   where positionsEnd = map fst wigLads
-        positionsStart = map (readInt . (\x-> x + 1) . toInt) $ "1" : (init positionsEnd)
+        positionsStart = map (readInt . (\x-> x + 1) . toInt) $ "0" : (init positionsEnd)
         signs = map (snd . snd) wigLads
         chrs = repeat chr
         
-main = do
+callLads = do
   inputwig <- TextIO.readFile find_lads_input_path
   let res = T.unlines $
             map (liftA2 mergeChr 
@@ -209,4 +225,37 @@ main = do
                         (findLadsOnChr . snd))
            (wig2chr inputwig)
   TextIO.writeFile (find_lads_input_path ++ ".bed") res
+
+-- ########################
+-- merge LADs
+-- merge small Lads to big Lads, with arbituary sizes; input is bed file
+-- 1) if the block is small than 50kb, merge to it's neigbors
+
+-- asssume bed files are sorted by chr
+separateByChr bed = L.groupBy ((==) `on` chr_bed) bed 
+
+switchSign (b:bs) sizeLimit  
+  | bs == [] = []
+  | bedSize b > sizeLimit = b : switchSign bs sizeLimit
+  | bedSize b <= sizeLimit = switchSign (Bed (chr_bed b) 
+                                             (start_bed b) 
+                                             (end_bed (head bs)) 
+                                             (sign_bed (head bs)) : 
+                                        (drop 1 bs)) sizeLimit
+
+mergeLads bed = map mergeBySign $ L.groupBy ((==) `on` sign_bed) bed
+  where mergeBySign beds = Bed (chr_bed $ head beds) (start_bed $ head beds) (end_bed $ last beds) (sign_bed $ head beds)
+
+mean30_bed_inputpath = "/Users/minzhang/Documents/data/P55_hiC_looping/data/GSM557443-17744.array.hg19.sort.mean30.wig.bed"
+
+mergeLadsIO bed_input_path = do
+  beds <- separateByChr . map list2Bed <$> importBed bed_input_path
+  let res = concat $ map (\x-> mergeLads $ switchSign x (80 * 1000)) beds
+  exportBed (bed_input_path ++ ".merged.bed") res
+    where importBed inputpath = map (T.splitOn "\t") . T.lines <$> TextIO.readFile inputpath
+          exportBed outputpath bed = TextIO.writeFile outputpath (T.unlines $ 
+                                                                  map (T.intercalate "\t" . 
+                                                                       bed2List) bed)
   
+  
+main = mergeLadsIO mean30_bed_inputpath
